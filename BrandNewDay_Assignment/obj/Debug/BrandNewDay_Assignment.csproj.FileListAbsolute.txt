@@ -1,0 +1,10 @@
+C:\Users\patin\source\repos\BrandNewDay_Assignment\BrandNewDay_Assignment\bin\Debug\BrandNewDay_Assignment.exe.config
+C:\Users\patin\source\repos\BrandNewDay_Assignment\BrandNewDay_Assignment\bin\Debug\BrandNewDay_Assignment.exe
+C:\Users\patin\source\repos\BrandNewDay_Assignment\BrandNewDay_Assignment\bin\Debug\BrandNewDay_Assignment.pdb
+C:\Users\patin\source\repos\BrandNewDay_Assignment\BrandNewDay_Assignment\bin\Debug\WebDriver.dll
+C:\Users\patin\source\repos\BrandNewDay_Assignment\BrandNewDay_Assignment\bin\Debug\WebDriver.xml
+C:\Users\patin\source\repos\BrandNewDay_Assignment\BrandNewDay_Assignment\obj\Debug\BrandNewDay_Assignment.csprojAssemblyReference.cache
+C:\Users\patin\source\repos\BrandNewDay_Assignment\BrandNewDay_Assignment\obj\Debug\BrandNewDay_Assignment.csproj.CoreCompileInputs.cache
+C:\Users\patin\source\repos\BrandNewDay_Assignment\BrandNewDay_Assignment\obj\Debug\BrandNewDay_Assignment.csproj.CopyComplete
+C:\Users\patin\source\repos\BrandNewDay_Assignment\BrandNewDay_Assignment\obj\Debug\BrandNewDay_Assignment.exe
+C:\Users\patin\source\repos\BrandNewDay_Assignment\BrandNewDay_Assignment\obj\Debug\BrandNewDay_Assignment.pdb
