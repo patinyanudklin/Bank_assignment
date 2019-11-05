@@ -8,18 +8,39 @@ using System.Threading.Tasks;
 
 namespace BrandNewDay_Assignment
 {
+    enum MENU
+    {
+        CREATE_ACCOUNT = 1,
+        DEPOSIT_MONEY = 2,
+        TRANSFER_MONEY = 3,
+        QUIT_PROGRAM = 777
+    }
+    enum STATUS_CODE
+    {
+        OK = 0,
+        INSUFFICIENT_AMOUNT = 1,
+        TRANSFER_FAIL = 2
+    }
+
+    class Constants
+    {
+        public const double feeCharge = 0.1;
+    }
     class Program
     {
         static void Main(string[] args)
         {
+            string iban = GetIban();
+            DebugDB();
+            return;
         }
 
-        static string getIban()
+        static string GetIban()
         {
             string webDestination = @"http:\\randomiban.com\?country=Netherlands";
             string xPath = "//*[@id='demo']";
-            string chromeDriverAbsolutePath = @"C:\Users\patin\source\repos\core_learning\core_learning\bin\Debug\netcoreapp2.1";
-            var chromeDriver = new ChromeDriver(chromeDriverAbsolutePath);
+
+            var chromeDriver = new ChromeDriver();
 
             chromeDriver.Navigate().GoToUrl(webDestination);
             var number = chromeDriver.FindElementByXPath(xPath);
@@ -28,8 +49,8 @@ namespace BrandNewDay_Assignment
 
             return output;
         }
-
-        static int mainMenu()
+        #region functions
+        static int MainMenu()
         {
             int option = 0;
             string temp;
@@ -45,10 +66,10 @@ namespace BrandNewDay_Assignment
                 {
                     Console.WriteLine("Invalid choice");
                     // Delete this one out!
-                    if (option == 777)
+                    if (option == (int) MENU.QUIT_PROGRAM)
                     {
-                        Console.WriteLine("Shortcut");
-                        break;
+                        Console.WriteLine("Quit the program");
+                        return option;
                     }
                     continue;
                 }
@@ -57,7 +78,7 @@ namespace BrandNewDay_Assignment
             return option;
         }
 
-        static int createNewAcct()
+        static int CreateNewAcct()
         {
             Console.Write("Citizen Id: ");
             Console.ReadLine();
@@ -71,17 +92,114 @@ namespace BrandNewDay_Assignment
             Console.ReadLine();
             return 0;
         }
+        #endregion
 
-        static int depositMoney()
+        #region DB functions
+        static int CreateNewCustomer(string citizenId)
         {
+            Console.WriteLine("First Name:");
+            string firstName = Console.ReadLine();
+            Console.WriteLine("Last Name:");
+            string lastName = Console.ReadLine();
+
+            using (var bankcontext = new BankContext())
+            {
+                Customer cus = new Customer
+                {
+                    CitizenID = citizenId,
+                    FirstName = firstName,
+                    LastName = lastName,
+                    Accounts = null
+                };
+                bankcontext.Customers.Add(cus);
+                bankcontext.SaveChanges();
+            }
+            return 0;
+        }
+        static int CreateNewCustomer()
+        {
+            Console.WriteLine("Citizen ID:");
+            string citizenId = Console.ReadLine();
+            CreateNewCustomer(citizenId);
+            return 0;
+        }
+        static int DepositMoney()
+        {
+            string iban;
+            double amount;
+
             Console.Write("iban: ");
-            Console.WriteLine();
+            iban = Console.ReadLine();
 
             // validation
 
             //
+            Console.Write("Amount: ");
+            amount = Double.Parse( Console.ReadLine() );
+            DepositMoney(iban, amount);
             return 0;
         }
+
+        static bool DepositValidation(string citizenID, string iban)
+        {
+            using(var context = new BankContext())
+            {
+                var acct = context.Customers.SingleOrDefault(c => c.CitizenID == citizenID)
+                    .Accounts.SingleOrDefault(a => a.IBAN == iban);
+                if (acct != null)
+                    return true;
+                else
+                    return false;
+            }
+        }
+
+        static int TransferMoney(string senderCitizenID, string iban1, string iban2, double amount)
+        {
+            using (var context = new BankContext())
+            {
+                var acct1 = context.Customers.Single(c => c.CitizenID == senderCitizenID)
+                .Accounts.SingleOrDefault(a => a.IBAN == iban1);
+                var acct2 = context.Accounts.Single(a => a.IBAN == iban2);
+
+                if (acct1.Balance < amount) return (int) STATUS_CODE.INSUFFICIENT_AMOUNT;
+
+                acct1.Balance -= amount;
+                acct2.Balance += amount;
+            }
+            return (int) STATUS_CODE.OK;
+        }
+
+        static int DepositMoney( string iban, double amount)
+        {
+            Console.WriteLine("Received {0}, {1}% fee charged.", amount, Constants.feeCharge);
+            double realDeposit = amount - amount * Constants.feeCharge / 100;
+            Console.WriteLine("Deposit amount: {0}", realDeposit);
+            using (var context = new BankContext())
+            {
+                var account = context.Accounts.SingleOrDefault(a => a.IBAN == iban);
+                if(account != null)
+                {
+                    account.Balance += realDeposit;
+                }
+                context.SaveChanges();
+            }
+            return 0;
+        }
+
+        static void DebugDB()
+        {
+            using (var context = new BankContext())
+            {
+                var cusQuery = from cus in context.Customers
+                               select cus;
+                var allCustomers = cusQuery.ToList();
+                var accountQuery = from account in context.Accounts
+                                   select account;
+                var allAccounts = accountQuery.ToList();
+            }
+        }
+        #endregion
+
 
         public class Customer
         {
@@ -95,9 +213,10 @@ namespace BrandNewDay_Assignment
         public class Account
         {
             public int ID { get; set; }
+            public string IBAN { get; set; }
             public virtual Customer Owner { get; set; }
             public string AccountName { get; set; }
-            public long Balance { get; set; }
+            public double Balance { get; set; }
         }
 
         public class BankContext : DbContext
