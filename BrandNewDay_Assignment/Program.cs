@@ -1,4 +1,5 @@
-﻿using OpenQA.Selenium.Chrome;
+﻿using BrandNewDay_Assignment.Models;
+using OpenQA.Selenium.Chrome;
 using System;
 using System.Collections.Generic;
 using System.Data.Entity;
@@ -13,7 +14,9 @@ namespace BrandNewDay_Assignment
         CREATE_ACCOUNT = 1,
         DEPOSIT_MONEY = 2,
         TRANSFER_MONEY = 3,
-        QUIT_PROGRAM = 777
+        QUIT_PROGRAM = 777,
+        DEBUG_DB = 888,
+        TRUNCATE_DB = 999
     }
     enum STATUS_CODE
     {
@@ -24,13 +27,43 @@ namespace BrandNewDay_Assignment
 
     class Constants
     {
-        public const double feeCharge = 0.1;
+        // 0.1%
+        public const double feeCharge = 0.001;
     }
     class Program
     {
         static void Main(string[] args)
         {
-            string iban = GetIban();
+            int choice = 0;
+
+            do
+            {
+                choice = MainMenu();
+                switch(choice)
+                {
+                    case (int)MENU.CREATE_ACCOUNT:
+                        CreateNewAcct();
+                        break;
+                    case (int)MENU.DEPOSIT_MONEY:
+                        DepositMoney();
+                        break;
+                    case (int)MENU.TRANSFER_MONEY:
+                        TransferMoney();
+                        break;
+                    case (int)MENU.DEBUG_DB:
+                        DebugDB();
+                        break;
+                    case (int)MENU.TRUNCATE_DB:
+                        DeleteDB();
+                        break;
+                    case (int)MENU.QUIT_PROGRAM:
+                        break;
+                    default:
+                        Console.WriteLine("Invalid choice");
+                        break;
+                }
+            } while (choice != (int)MENU.QUIT_PROGRAM);
+
             DebugDB();
             return;
         }
@@ -62,44 +95,74 @@ namespace BrandNewDay_Assignment
                                   "3. Transfer money");
                 Console.Write("Enter choice: ");
                 temp = Console.ReadLine();
-                if (!Int32.TryParse(temp, out option) || (option > 3 || option < 1))
+                if (!Int32.TryParse(temp, out option))
                 {
                     Console.WriteLine("Invalid choice");
-                    // Delete this one out!
-                    if (option == (int) MENU.QUIT_PROGRAM)
-                    {
-                        Console.WriteLine("Quit the program");
-                        return option;
-                    }
                     continue;
                 }
-                break;
+                return option;
             }
-            return option;
         }
 
         static int CreateNewAcct()
         {
+            string citizenID, acctName;
+            double initAmount;
             Console.Write("Citizen Id: ");
-            Console.ReadLine();
+            citizenID = Console.ReadLine();
 
             // if new customer ask name and surname, else create the bank account
+            if (IsNewCustomer(citizenID))
+                CreateNewCustomer(citizenID);
 
             Console.Write("Account name: ");
-            Console.ReadLine();
+            acctName = Console.ReadLine();
 
             Console.Write("Initial Deposit: ");
-            Console.ReadLine();
+            initAmount = Double.Parse(Console.ReadLine());
+
+            CreateNewAcct(citizenID, acctName, initAmount);
             return 0;
         }
         #endregion
 
         #region DB functions
+        static int CreateNewAcct(string citizenID, string acctName, double initAmount)
+        {
+            using (var context = new BankContext())
+            {
+                var cus = context.Customers.Single(c => c.CitizenID == citizenID);
+                Account newAcct = new Account()
+                {
+                    IBAN = GetIban(),
+                    Owner = cus,
+                    AccountName = acctName,
+                    Balance = initAmount
+                };
+                
+                context.Accounts.Add(newAcct);
+                context.SaveChanges();
+                cus.Accounts.Add(newAcct);
+                context.SaveChanges();
+            }
+            return (int)STATUS_CODE.OK;
+        }
+        static bool IsNewCustomer(string citizenId)
+        {
+            using (var context = new BankContext())
+            {
+                var cus = context.Customers.SingleOrDefault(c=>c.CitizenID == citizenId);
+                if (cus != null)
+                    return false;
+                else
+                    return true;
+            }
+        }
         static int CreateNewCustomer(string citizenId)
         {
-            Console.WriteLine("First Name:");
+            Console.Write("First Name:");
             string firstName = Console.ReadLine();
-            Console.WriteLine("Last Name:");
+            Console.Write("Last Name:");
             string lastName = Console.ReadLine();
 
             using (var bankcontext = new BankContext())
@@ -108,18 +171,18 @@ namespace BrandNewDay_Assignment
                 {
                     CitizenID = citizenId,
                     FirstName = firstName,
-                    LastName = lastName,
-                    Accounts = null
+                    LastName = lastName
                 };
                 bankcontext.Customers.Add(cus);
                 bankcontext.SaveChanges();
             }
-            return 0;
+            return (int)STATUS_CODE.OK;
         }
         static int CreateNewCustomer()
         {
+            string citizenId;
             Console.WriteLine("Citizen ID:");
-            string citizenId = Console.ReadLine();
+            citizenId = Console.ReadLine();
             CreateNewCustomer(citizenId);
             return 0;
         }
@@ -153,18 +216,36 @@ namespace BrandNewDay_Assignment
             }
         }
 
+        static int TransferMoney()
+        {
+            string senderCitizenID, iban1, iban2;
+            double amount;
+            Console.Write("Citizen ID: ");
+            senderCitizenID = Console.ReadLine();
+            Console.Write("Sender account iban: ");
+            iban1 = Console.ReadLine();
+            Console.Write("Receiver account iban: ");
+            iban2 = Console.ReadLine();
+            Console.Write("Amount: ");
+            amount = Double.Parse(Console.ReadLine());
+            TransferMoney(senderCitizenID, iban1, iban2, amount);
+
+            return (int) STATUS_CODE.OK;
+        }
+
         static int TransferMoney(string senderCitizenID, string iban1, string iban2, double amount)
         {
             using (var context = new BankContext())
             {
-                var acct1 = context.Customers.Single(c => c.CitizenID == senderCitizenID)
-                .Accounts.SingleOrDefault(a => a.IBAN == iban1);
-                var acct2 = context.Accounts.Single(a => a.IBAN == iban2);
+                var cus1 = context.Customers.Single(c => c.CitizenID == senderCitizenID);
+                var senderAcct = context.Accounts.Single(a => a.IBAN == iban1);
+                var receiverAcct = context.Accounts.Single(a => a.IBAN == iban2);
 
-                if (acct1.Balance < amount) return (int) STATUS_CODE.INSUFFICIENT_AMOUNT;
+                if (senderAcct.Balance < amount) return (int) STATUS_CODE.INSUFFICIENT_AMOUNT;
 
-                acct1.Balance -= amount;
-                acct2.Balance += amount;
+                senderAcct.Balance -= amount;
+                receiverAcct.Balance += amount;
+                context.SaveChanges();
             }
             return (int) STATUS_CODE.OK;
         }
@@ -172,7 +253,7 @@ namespace BrandNewDay_Assignment
         static int DepositMoney( string iban, double amount)
         {
             Console.WriteLine("Received {0}, {1}% fee charged.", amount, Constants.feeCharge);
-            double realDeposit = amount - amount * Constants.feeCharge / 100;
+            double realDeposit = amount *(1 - Constants.feeCharge);
             Console.WriteLine("Deposit amount: {0}", realDeposit);
             using (var context = new BankContext())
             {
@@ -183,7 +264,7 @@ namespace BrandNewDay_Assignment
                 }
                 context.SaveChanges();
             }
-            return 0;
+            return (int)STATUS_CODE.OK;
         }
 
         static void DebugDB()
@@ -196,34 +277,33 @@ namespace BrandNewDay_Assignment
                 var accountQuery = from account in context.Accounts
                                    select account;
                 var allAccounts = accountQuery.ToList();
+                foreach(Customer c in allCustomers)
+                {
+                    Console.WriteLine("CitizenID: {0}, {1} {2}", c.CitizenID, c.FirstName, c.LastName);
+                    Console.WriteLine("----- Accounts -----");
+                    if (c.Accounts!=null)
+                        foreach (Account a in c.Accounts)
+                            Console.WriteLine("iban: {0} {1}, Remain: {2}", a.IBAN, a.AccountName, a.Balance);
+                    Console.WriteLine("--------------------");
+                }
+                foreach(Account a in allAccounts)
+                {
+                    Console.WriteLine("Owner: {0} iban: {1} {2}, Balance: {3}", a.Owner.CitizenID, a.IBAN, a.AccountName, a.Balance);
+                }
             }
         }
         #endregion
 
-
-        public class Customer
+        static void DeleteDB()
         {
-            public int ID { get; set; }
-            public string FirstName { get; set; }
-            public string LastName { get; set; }
-            public string CitizenID { get; set; }
-            public virtual ICollection<Account> Accounts { get; set; }
-        }
-
-        public class Account
-        {
-            public int ID { get; set; }
-            public string IBAN { get; set; }
-            public virtual Customer Owner { get; set; }
-            public string AccountName { get; set; }
-            public double Balance { get; set; }
-        }
-
-        public class BankContext : DbContext
-        {
-            public virtual DbSet<Customer> Customers { get; set; }
-            public virtual DbSet<Account> Accounts { get; set; }
-
+            Console.Write("Pass: ");
+            if (Console.ReadLine() != "confirm")
+                return;
+            using (var context = new BankContext())
+            {
+                context.Database.ExecuteSqlCommand("DELETE FROM Accounts");
+                context.Database.ExecuteSqlCommand("DELETE FROM Customers");
+            }
         }
     }
 }
