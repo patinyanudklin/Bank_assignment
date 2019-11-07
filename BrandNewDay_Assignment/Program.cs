@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace BrandNewDay_Assignment
 {
-    enum MENU
+    public enum MENU
     {
         CREATE_ACCOUNT = 1,
         DEPOSIT_MONEY = 2,
@@ -18,43 +18,40 @@ namespace BrandNewDay_Assignment
         DEBUG_DB = 888,
         TRUNCATE_DB = 999
     }
-    enum STATUS_CODE
+    public enum STATUS_CODE
     {
         OK = 0,
         INSUFFICIENT_AMOUNT = 1,
         TRANSFER_FAIL = 2
     }
 
-    class Constants
+    class Program : IProgram
     {
-        // 0.1%
-        public const double feeCharge = 0.001;
-    }
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            int choice = 0;
+        private IDataProcessor DB = new DataProcessor();
 
+        public static void Main(string[] args)
+        {
+            Program p = new Program();
+            int choice = 0;
             do
             {
-                choice = MainMenu();
-                switch(choice)
+                choice = p.MainMenu();
+                switch (choice)
                 {
                     case (int)MENU.CREATE_ACCOUNT:
-                        CreateNewAcct();
+                        p.CreateNewAcct();
                         break;
                     case (int)MENU.DEPOSIT_MONEY:
-                        DepositMoney();
+                        p.DepositMoney();
                         break;
                     case (int)MENU.TRANSFER_MONEY:
-                        TransferMoney();
+                        p.TransferMoney();
                         break;
                     case (int)MENU.DEBUG_DB:
-                        DebugDB();
+                        DBDebugger.DebugDB();
                         break;
                     case (int)MENU.TRUNCATE_DB:
-                        DeleteDB();
+                        DBDebugger.DeleteDB();
                         break;
                     case (int)MENU.QUIT_PROGRAM:
                         break;
@@ -63,27 +60,10 @@ namespace BrandNewDay_Assignment
                         break;
                 }
             } while (choice != (int)MENU.QUIT_PROGRAM);
-
-            DebugDB();
             return;
         }
 
-        static string GetIban()
-        {
-            string webDestination = @"http:\\randomiban.com\?country=Netherlands";
-            string xPath = "//*[@id='demo']";
-
-            var chromeDriver = new ChromeDriver();
-
-            chromeDriver.Navigate().GoToUrl(webDestination);
-            var number = chromeDriver.FindElementByXPath(xPath);
-            var output = number.Text;
-            chromeDriver.Close();
-
-            return output;
-        }
-        #region functions
-        static int MainMenu()
+        public int MainMenu()
         {
             int option = 0;
             string temp;
@@ -104,7 +84,7 @@ namespace BrandNewDay_Assignment
             }
         }
 
-        static int CreateNewAcct()
+        public void CreateNewAcct()
         {
             string citizenID, acctName;
             double initAmount;
@@ -112,7 +92,7 @@ namespace BrandNewDay_Assignment
             citizenID = Console.ReadLine();
 
             // if new customer ask name and surname, else create the bank account
-            if (IsNewCustomer(citizenID))
+            if (DB.IsNewCustomer(citizenID))
                 CreateNewCustomer(citizenID);
 
             Console.Write("Account name: ");
@@ -121,72 +101,27 @@ namespace BrandNewDay_Assignment
             Console.Write("Initial Deposit: ");
             initAmount = Double.Parse(Console.ReadLine());
 
-            CreateNewAcct(citizenID, acctName, initAmount);
-            return 0;
+            DB.CreateNewAcct(citizenID, acctName, initAmount);
         }
-        #endregion
 
-        #region DB functions
-        static int CreateNewAcct(string citizenID, string acctName, double initAmount)
-        {
-            using (var context = new BankContext())
-            {
-                var cus = context.Customers.Single(c => c.CitizenID == citizenID);
-                Account newAcct = new Account()
-                {
-                    IBAN = GetIban(),
-                    Owner = cus,
-                    AccountName = acctName,
-                    Balance = initAmount
-                };
-                
-                context.Accounts.Add(newAcct);
-                context.SaveChanges();
-                cus.Accounts.Add(newAcct);
-                context.SaveChanges();
-            }
-            return (int)STATUS_CODE.OK;
-        }
-        static bool IsNewCustomer(string citizenId)
-        {
-            using (var context = new BankContext())
-            {
-                var cus = context.Customers.SingleOrDefault(c=>c.CitizenID == citizenId);
-                if (cus != null)
-                    return false;
-                else
-                    return true;
-            }
-        }
-        static int CreateNewCustomer(string citizenId)
-        {
-            Console.Write("First Name:");
-            string firstName = Console.ReadLine();
-            Console.Write("Last Name:");
-            string lastName = Console.ReadLine();
-
-            using (var bankcontext = new BankContext())
-            {
-                Customer cus = new Customer
-                {
-                    CitizenID = citizenId,
-                    FirstName = firstName,
-                    LastName = lastName
-                };
-                bankcontext.Customers.Add(cus);
-                bankcontext.SaveChanges();
-            }
-            return (int)STATUS_CODE.OK;
-        }
-        static int CreateNewCustomer()
+        public void CreateNewCustomer()
         {
             string citizenId;
             Console.WriteLine("Citizen ID:");
             citizenId = Console.ReadLine();
             CreateNewCustomer(citizenId);
-            return 0;
         }
-        static int DepositMoney()
+
+        public void CreateNewCustomer(string citizenId)
+        {
+            Console.Write("First Name:");
+            string firstName = Console.ReadLine();
+            Console.Write("Last Name:");
+            string lastName = Console.ReadLine();
+            DB.CreateNewCustomer(citizenId, firstName, lastName);
+        }
+
+        public void DepositMoney()
         {
             string iban;
             double amount;
@@ -195,115 +130,49 @@ namespace BrandNewDay_Assignment
             iban = Console.ReadLine();
 
             // validation
-
+            if (!DB.DepositValidation(iban))
+            {
+                Console.WriteLine("This account does not exist!");
+                return;
+            }
             //
             Console.Write("Amount: ");
-            amount = Double.Parse( Console.ReadLine() );
-            DepositMoney(iban, amount);
-            return 0;
+            amount = Double.Parse(Console.ReadLine());
+            DB.DepositMoney(iban, amount);
         }
 
-        static bool DepositValidation(string citizenID, string iban)
-        {
-            using(var context = new BankContext())
-            {
-                var acct = context.Customers.SingleOrDefault(c => c.CitizenID == citizenID)
-                    .Accounts.SingleOrDefault(a => a.IBAN == iban);
-                if (acct != null)
-                    return true;
-                else
-                    return false;
-            }
-        }
-
-        static int TransferMoney()
+        public void TransferMoney()
         {
             string senderCitizenID, iban1, iban2;
+            bool validated = false;
             double amount;
-            Console.Write("Citizen ID: ");
-            senderCitizenID = Console.ReadLine();
-            Console.Write("Sender account iban: ");
-            iban1 = Console.ReadLine();
+            do
+            {
+                Console.Write("Citizen ID: ");
+                senderCitizenID = Console.ReadLine();
+                Console.Write("Sender account iban: ");
+                iban1 = Console.ReadLine();
+                validated = DB.IsSenderOwnThisAcct(senderCitizenID, iban1);
+            }
+            while (!validated) ;
             Console.Write("Receiver account iban: ");
             iban2 = Console.ReadLine();
             Console.Write("Amount: ");
             amount = Double.Parse(Console.ReadLine());
-            TransferMoney(senderCitizenID, iban1, iban2, amount);
-
-            return (int) STATUS_CODE.OK;
-        }
-
-        static int TransferMoney(string senderCitizenID, string iban1, string iban2, double amount)
-        {
-            using (var context = new BankContext())
+            if(DB.TransferMoney(senderCitizenID, iban1, iban2, amount) == (int)STATUS_CODE.INSUFFICIENT_AMOUNT)
             {
-                var cus1 = context.Customers.Single(c => c.CitizenID == senderCitizenID);
-                var senderAcct = context.Accounts.Single(a => a.IBAN == iban1);
-                var receiverAcct = context.Accounts.Single(a => a.IBAN == iban2);
-
-                if (senderAcct.Balance < amount) return (int) STATUS_CODE.INSUFFICIENT_AMOUNT;
-
-                senderAcct.Balance -= amount;
-                receiverAcct.Balance += amount;
-                context.SaveChanges();
-            }
-            return (int) STATUS_CODE.OK;
-        }
-
-        static int DepositMoney( string iban, double amount)
-        {
-            Console.WriteLine("Received {0}, {1}% fee charged.", amount, Constants.feeCharge);
-            double realDeposit = amount *(1 - Constants.feeCharge);
-            Console.WriteLine("Deposit amount: {0}", realDeposit);
-            using (var context = new BankContext())
-            {
-                var account = context.Accounts.SingleOrDefault(a => a.IBAN == iban);
-                if(account != null)
-                {
-                    account.Balance += realDeposit;
-                }
-                context.SaveChanges();
-            }
-            return (int)STATUS_CODE.OK;
-        }
-
-        static void DebugDB()
-        {
-            using (var context = new BankContext())
-            {
-                var cusQuery = from cus in context.Customers
-                               select cus;
-                var allCustomers = cusQuery.ToList();
-                var accountQuery = from account in context.Accounts
-                                   select account;
-                var allAccounts = accountQuery.ToList();
-                foreach(Customer c in allCustomers)
-                {
-                    Console.WriteLine("CitizenID: {0}, {1} {2}", c.CitizenID, c.FirstName, c.LastName);
-                    Console.WriteLine("----- Accounts -----");
-                    if (c.Accounts!=null)
-                        foreach (Account a in c.Accounts)
-                            Console.WriteLine("iban: {0} {1}, Remain: {2}", a.IBAN, a.AccountName, a.Balance);
-                    Console.WriteLine("--------------------");
-                }
-                foreach(Account a in allAccounts)
-                {
-                    Console.WriteLine("Owner: {0} iban: {1} {2}, Balance: {3}", a.Owner.CitizenID, a.IBAN, a.AccountName, a.Balance);
-                }
+                Console.WriteLine("Transfer not success!");
+                Console.WriteLine("Insufficient amount!");
             }
         }
-        #endregion
+    }
 
-        static void DeleteDB()
-        {
-            Console.Write("Pass: ");
-            if (Console.ReadLine() != "confirm")
-                return;
-            using (var context = new BankContext())
-            {
-                context.Database.ExecuteSqlCommand("DELETE FROM Accounts");
-                context.Database.ExecuteSqlCommand("DELETE FROM Customers");
-            }
-        }
+    interface IProgram
+    {
+        void CreateNewAcct();
+        void CreateNewCustomer();
+        void CreateNewCustomer(string citizenId);
+        void DepositMoney();
+        void TransferMoney();
     }
 }
