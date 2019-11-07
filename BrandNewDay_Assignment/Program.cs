@@ -27,11 +27,18 @@ namespace BrandNewDay_Assignment
 
     class Program : IProgram
     {
-        private IDataProcessor DB = new DataProcessor();
+        public IDataProcessor DB;
+        public IConsoleReadLine MyConsole;
+
+        public Program(IDataProcessor db, IConsoleReadLine console)
+        {
+            DB = db;
+            MyConsole = console;
+        }
 
         public static void Main(string[] args)
         {
-            Program p = new Program();
+            Program p = new Program( new DataProcessor(), new ConsoleReadLine());
             int choice = 0;
             do
             {
@@ -89,17 +96,17 @@ namespace BrandNewDay_Assignment
             string citizenID, acctName;
             double initAmount;
             Console.Write("Citizen Id: ");
-            citizenID = Console.ReadLine();
+            citizenID = MyConsole.Input();//Console.ReadLine();
 
             // if new customer ask name and surname, else create the bank account
             if (DB.IsNewCustomer(citizenID))
                 CreateNewCustomer(citizenID);
 
             Console.Write("Account name: ");
-            acctName = Console.ReadLine();
+            acctName = MyConsole.Input(); //Console.ReadLine();
 
             Console.Write("Initial Deposit: ");
-            initAmount = Double.Parse(Console.ReadLine());
+            initAmount = Double.Parse(MyConsole.Input()); // Console.ReadLine());
 
             DB.CreateNewAcct(citizenID, acctName, initAmount);
         }
@@ -167,12 +174,22 @@ namespace BrandNewDay_Assignment
         }
     }
 
-    interface IProgram
+    public interface IProgram
     {
         void CreateNewAcct();
         void CreateNewCustomer();
         void CreateNewCustomer(string citizenId);
         void DepositMoney();
         void TransferMoney();
+    }
+
+    public interface IConsoleReadLine
+    {
+        string Input();
+    }
+
+    public class ConsoleReadLine: IConsoleReadLine
+    {
+        public string Input() { return Console.ReadLine(); }
     }
 }

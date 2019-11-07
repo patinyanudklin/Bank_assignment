@@ -116,7 +116,7 @@ namespace BrandNewDay_Assignment.Models
         }
     }
 
-    interface IDataProcessor
+    public interface IDataProcessor
     {
         bool IsNewCustomer(string citizenId);
         bool DepositValidation(string iban);

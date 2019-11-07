@@ -24,7 +24,7 @@ namespace BrandNewDay_Assignment.Models
             return output;
         }
     }
-    interface IIbanRetriver
+    public interface IIbanRetriver
     {
         string GetIban();
     }
