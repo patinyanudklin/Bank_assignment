@@ -8,7 +8,7 @@ namespace BrandNewDay_Assignment.Models
 {
     class DataProcessor : IDataProcessor
     {
-
+        // The class responsible to work mainly with database
         public bool IsNewCustomer(string citizenId)
         {
             using (var context = new BankContext())

@@ -8,6 +8,7 @@ namespace BrandNewDay_Assignment.Models
 {
     class DBDebugger
     {
+        // A couple of functions to debug and work with the Database
         public static void DebugDB()
         {
             using (var context = new BankContext())

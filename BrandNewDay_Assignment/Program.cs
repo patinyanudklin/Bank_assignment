@@ -96,17 +96,16 @@ namespace BrandNewDay_Assignment
             string citizenID, acctName;
             double initAmount;
             Console.Write("Citizen Id: ");
-            citizenID = MyConsole.Input();//Console.ReadLine();
-
+            citizenID = MyConsole.Input();
             // if new customer ask name and surname, else create the bank account
             if (DB.IsNewCustomer(citizenID))
                 CreateNewCustomer(citizenID);
 
             Console.Write("Account name: ");
-            acctName = MyConsole.Input(); //Console.ReadLine();
+            acctName = MyConsole.Input();
 
             Console.Write("Initial Deposit: ");
-            initAmount = Double.Parse(MyConsole.Input()); // Console.ReadLine());
+            initAmount = Double.Parse(MyConsole.Input());
 
             DB.CreateNewAcct(citizenID, acctName, initAmount);
         }

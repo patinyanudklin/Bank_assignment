@@ -9,6 +9,7 @@ namespace BrandNewDay_Assignment.Models
 {
     class IbanRetriever : IIbanRetriver
     {
+        // Using Selenium to scrap the javascript generated data from website
         public string GetIban()
         {
             string webDestination = @"http:\\randomiban.com\?country=Netherlands";
